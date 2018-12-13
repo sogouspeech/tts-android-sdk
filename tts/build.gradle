@@ -1,0 +1,109 @@
+apply plugin: 'com.android.library'
+apply plugin: 'com.google.protobuf'
+apply plugin: 'com.github.dcendents.android-maven'
+
+android {
+    compileSdkVersion 28
+    buildToolsVersion "28.0.0"
+    publishNonDefault true
+
+    defaultConfig {
+        minSdkVersion 15
+        targetSdkVersion 25
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            debuggable true
+
+        }
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            debuggable true
+
+        }
+    }
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+
+
+    }
+
+
+
+    protobuf {
+        protoc {
+            artifact = 'com.google.protobuf:protoc:3.4.0'
+        }
+        plugins {
+            javalite {
+                artifact = "com.google.protobuf:protoc-gen-javalite:3.0.0"
+            }
+            grpc {
+                artifact = 'io.grpc:protoc-gen-grpc-java:1.8.0' // CURRENT_GRPC_VERSION
+            }
+        }
+        generateProtoTasks {
+            all().each { task ->
+                task.builtins {
+                    java {}
+                }
+                task.plugins {
+                    grpc {
+                    }
+                }
+            }
+        }
+    }
+
+
+    ext {
+        grpcVersion = '1.8.0'
+    }
+
+    dependencies {
+        api fileTree(dir: 'libs', include: ['*.jar'])
+//    compile files('libs/sogou_speech_auth.jar')
+
+        implementation 'com.android.support:appcompat-v7:25.3.1'
+
+        implementation 'javax.annotation:javax.annotation-api:1.2'
+        implementation("io.grpc:grpc-protobuf:${grpcVersion}") {
+            exclude module: 'jsr305'
+        }
+        implementation("io.grpc:grpc-stub:${grpcVersion}") {
+            exclude module: 'jsr305'
+        }
+        implementation("io.grpc:grpc-auth:${grpcVersion}") {
+            exclude module: 'jsr305'
+        }
+        implementation("io.grpc:grpc-okhttp:${grpcVersion}") {
+            exclude module: 'jsr305'
+        }
+        // OAuth2 for Google API
+        implementation('com.google.auth:google-auth-library-oauth2-http:0.9.0') {
+            exclude module: 'jsr305'
+            exclude module: 'httpclient'
+        }
+
+//        offlineCompile project(':auth')
+//        compile('com.sogou.speech:common:0.1')
+        api 'com.github.sogouspeech:common-android-sdk:1.0.0'
+        api files('libs/conscrypt-1.4.0.jar')
+
+    }
+}
