@@ -76,8 +76,6 @@ android {
     }
 
     dependencies {
-        api fileTree(dir: 'libs', include: ['*.jar'])
-//    compile files('libs/sogou_speech_auth.jar')
 
         implementation 'com.android.support:appcompat-v7:25.3.1'
 
@@ -100,10 +98,9 @@ android {
             exclude module: 'httpclient'
         }
 
-//        offlineCompile project(':auth')
-//        compile('com.sogou.speech:common:0.1')
+
         api 'com.github.sogouspeech:common-android-sdk:1.0.0'
-        api files('libs/conscrypt-1.4.0.jar')
+        api 'org.conscrypt:conscrypt-android:1.4.2'
 
     }
 }
