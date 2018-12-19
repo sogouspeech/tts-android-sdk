@@ -29,12 +29,14 @@ public class TokenFetchTask {
     private Context context;
     private TokenFetchListener tokenFetchListener;
     private static long TIME_EXP = 8 * 60 * 60;
+    private String baseUrl;
 
 
 
-    public TokenFetchTask(Context context, TokenFetchListener listener) {
+    public TokenFetchTask(Context context, String baseUrl, TokenFetchListener listener) {
         this.context = context;
         this.tokenFetchListener = listener;
+        this.baseUrl = baseUrl;
     }
 
     public void execute() {
@@ -62,7 +64,7 @@ public class TokenFetchTask {
                 .setAppkey(CommonSharedPreference.getInstance(context).getString("appkey",""))
                 .setUuid(CommonSharedPreference.getInstance(context).getString("uuid",""))
                 .buildPartial();
-        ManagedChannel channel = new OkHttpChannelProvider().builderForAddress(TTSPlayer.sBaseUrl, 443)
+        ManagedChannel channel = new OkHttpChannelProvider().builderForAddress(baseUrl, 443)
                 .negotiationType(NegotiationType.TLS)
                 .overrideAuthority(TTSPlayer.sBaseUrl + ":443")
                 .sslSocketFactory(HttpsUtil.getSSLSocketFactory(null, null, null))

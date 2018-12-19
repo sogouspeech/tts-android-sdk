@@ -5,6 +5,7 @@ package com.sogou.tts.auth;
 
 import android.content.Context;
 
+import com.sogou.tts.TTSPlayer;
 
 
 public class AuthManager {
@@ -42,7 +43,7 @@ public class AuthManager {
         }
 
         if (!mOnlineStatus) {
-            TokenFetchTask task = new TokenFetchTask(context, new TokenFetchTask.TokenFetchListener() {
+            TokenFetchTask task = new TokenFetchTask(context, TTSPlayer.sBaseUrl, new TokenFetchTask.TokenFetchListener() {
                 @Override
                 public void onTokenFetchSucc(String result) {
                     mOnlineStatus = true;
