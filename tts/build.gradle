@@ -8,7 +8,7 @@ android {
     publishNonDefault true
 
     defaultConfig {
-        minSdkVersion 15
+        minSdkVersion 9
         targetSdkVersion 25
         versionCode 1
         versionName "1.0"
@@ -45,30 +45,7 @@ android {
 
 
 
-    protobuf {
-        protoc {
-            artifact = 'com.google.protobuf:protoc:3.4.0'
-        }
-        plugins {
-            javalite {
-                artifact = "com.google.protobuf:protoc-gen-javalite:3.0.0"
-            }
-            grpc {
-                artifact = 'io.grpc:protoc-gen-grpc-java:1.8.0' // CURRENT_GRPC_VERSION
-            }
-        }
-        generateProtoTasks {
-            all().each { task ->
-                task.builtins {
-                    java {}
-                }
-                task.plugins {
-                    grpc {
-                    }
-                }
-            }
-        }
-    }
+
 
 
     ext {
@@ -99,7 +76,7 @@ android {
         }
 
 
-        api 'com.github.sogouspeech:common-android-sdk:1.0.0'
+        api 'com.github.sogouspeech:common-android-sdk:1.0.1'
         api 'org.conscrypt:conscrypt-android:1.4.2'
 
     }
