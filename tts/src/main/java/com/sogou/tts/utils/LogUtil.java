@@ -14,6 +14,7 @@ public class LogUtil {
     private final static String tag = "SogouSpeech";
     private static boolean debug = true;
     private static String filter = "-->";
+    private static DefaultLogger logger = null;
 
     public static void v(String content){
         if(TextUtils.isEmpty(content)){
@@ -104,5 +105,17 @@ public class LogUtil {
 
     public static void setFilter(String filter) {
         LogUtil.filter = filter;
+    }
+
+    public static DefaultLogger getLogger() {
+        return logger;
+    }
+
+    public static void setLogger(DefaultLogger logger) {
+        LogUtil.logger = logger;
+    }
+
+    public interface DefaultLogger {
+        void log(String content);
     }
 }
