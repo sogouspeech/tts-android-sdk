@@ -565,7 +565,9 @@ public class TTSPlayer implements ISettingConfig {
         CommonSharedPreference.getInstance(context).setString("appid",info.appid);
         if (!TextUtils.isEmpty(info.token)) {
             CommonSharedPreference.getInstance(context).setString(CommonSharedPreference.TOKEN, info.token);
-
+            if (info.tokenExp > 0){
+                CommonSharedPreference.getInstance(context).setLong(CommonSharedPreference.TIMEOUT_STAMP, info.tokenExp);
+            }
         }else if(!TextUtils.isEmpty(info.appkey)) {
             CommonSharedPreference.getInstance(context).setString("appkey", info.appkey);
 
