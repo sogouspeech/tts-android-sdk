@@ -15,7 +15,7 @@ allprojects {
 implementation 'com.github.sogouspeech:common-android-sdk:1.0.1'
 ```
 ```
-implementation 'com.github.sogouspeech:tts-android-sdk:1.0.2'
+implementation 'com.github.sogouspeech:tts-android-sdk:1.0.4'
 ```
 
 使用方法请参考[搜狗知音文档](https://docs.zhiyin.sogou.com/docs/tts/sdk)
