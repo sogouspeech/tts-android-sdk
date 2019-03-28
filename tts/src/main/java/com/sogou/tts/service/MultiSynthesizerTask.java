@@ -9,12 +9,10 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
-import com.sogou.tts.SynthesizerData;
 import com.sogou.tts.TTSPlayer;
 import com.sogou.tts.TextModel;
 import com.sogou.tts.setting.ISettingConfig;
 import com.sogou.tts.utils.ErrorIndex;
-import com.sogou.tts.utils.LogUtil;
 
 import java.util.List;
 import java.util.Locale;
@@ -23,14 +21,11 @@ public class MultiSynthesizerTask extends Thread implements ISettingConfig {
 
     private static final String TAG = "MultiSynthesizerTask";
 
-    boolean isTreadRunning = true;
-
     private Handler mSynthesizerHandler;
     private List<Object> mInputTexts = null;
 
     private TTSPlayer ttsPlayer = null;
     private Handler ttsHandler = null;
-    private SynthesizerData sd;
     private int curTextIndex = 0;
     public final static int SYNCTHESIZER_DATA_START = 1;
     public final static int REMOVE_ALL_MESSAGE = 2;
@@ -126,7 +121,6 @@ public class MultiSynthesizerTask extends Thread implements ISettingConfig {
                         message.obj = seg;
                         mSynthesizerHandler.sendMessage(message);
 
-                        sendSynthSegMsg(sd);
                     }
 
                     @Override
@@ -162,7 +156,8 @@ public class MultiSynthesizerTask extends Thread implements ISettingConfig {
 
     private void synthesizerDataGot(byte[] result) {
         sumTime += result.length / 2.0f / 16000;
-        ttsPlayer.WavQueue.offer(result);
+        sendSynthSegMsg(result);
+
     }
 
     public boolean isThreadRunning() {

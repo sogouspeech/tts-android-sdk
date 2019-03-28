@@ -11,29 +11,24 @@ import android.os.Message;
 import android.text.TextUtils;
 
 import com.sogou.sogocommon.utils.CommonSharedPreference;
-import com.sogou.tts.auth.TokenFetchTask;
-import com.sogou.tts.utils.ErrorIndex;
 import com.sogou.tts.auth.AuthManager;
+import com.sogou.tts.auth.TokenFetchTask;
 import com.sogou.tts.listener.TTSPlayerListener;
-
-import com.sogou.tts.service.AudioTask;
+import com.sogou.tts.service.MessageAudioTask;
 import com.sogou.tts.service.MultiSynthesizerTask;
 import com.sogou.tts.setting.ISettingConfig;
+import com.sogou.tts.utils.ErrorIndex;
 import com.sogou.tts.utils.LogUtil;
 import com.sogou.tts.utils.Mode;
 
 import org.conscrypt.Conscrypt;
-
 
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -93,10 +88,7 @@ public class TTSPlayer implements ISettingConfig {
 
 
 
-    private AudioTask mAudioTask = null;
-
-    public Boolean mSynthEnd = false;
-    public Queue<byte[]> WavQueue = new ConcurrentLinkedQueue<byte[]>();
+    private MessageAudioTask mAudioTask = null;
 
     public LinkedBlockingQueue<TextModel> textQueue = new LinkedBlockingQueue<TextModel>();
     private TTSPlayerListener ttsPlayerListener = null;
@@ -162,36 +154,40 @@ public class TTSPlayer implements ISettingConfig {
                     break;
                 // handle audio stop message
                 case MSG_AUDIO_COMPLETE:
-                    handleAudioState(textModel,AudioState.AUDIO_ON_COMPLETE);
+                    handleAudioState(textModel, AudioState.AUDIO_ON_COMPLETE);
                     break;
                 case MSG_AUDIO_STOP:
                     //mAudioTask = null;
-                    handleAudioState(textModel,AudioState.AUDIO_ON_IDLE);
+                    handleAudioState(textModel, AudioState.AUDIO_ON_IDLE);
                     break;
                 // handle audio pause message
                 case MSG_AUDIO_PAUSE:
-                    handleAudioState(textModel,AudioState.AUDIO_ON_PAUSE);
+                    handleAudioState(textModel, AudioState.AUDIO_ON_PAUSE);
                     break;
                 // handle audio resume message
                 case MSG_AUDIO_RESUME:
-                    handleAudioState(textModel,AudioState.AUDIO_ON_RESUME);
+                    handleAudioState(textModel, AudioState.AUDIO_ON_RESUME);
                     break;
                 // handle audio play message
                 case MSG_AUDIO_PLAY:
-                    handleAudioState(textModel,AudioState.AUDIO_ON_PLAY);
+                    handleAudioState(textModel, AudioState.AUDIO_ON_PLAY);
                     break;
                 // handle synthesizer begin message
                 case MSG_SYNTH_BEGIN:
-                    synchronized (mSynthEnd) {
-                        mSynthEnd = false;
-                    }
+
                     break;
                 // handle synthesizer end message
                 case MSG_SYNTH_END:
-                    synchronized (mSynthEnd) {
-                        mSynthEnd = true;
-                        sumTime = (Float) msg.obj;
-                        ttsPlayerListener.onSynEnd(identifier,sumTime);
+                    sumTime = (Float) msg.obj;
+                    ttsPlayerListener.onSynEnd(identifier,sumTime);
+                    if (mAudioTask != null){
+                        mAudioTask.onSynEnd();
+                    }
+                    break;
+                case MSG_SYNTH_SEG:
+                    byte[] bytes = (byte[]) msg.obj;
+                    if (mAudioTask != null){
+                        mAudioTask.playBuffer(bytes);
                     }
                     break;
             }
@@ -211,7 +207,7 @@ public class TTSPlayer implements ISettingConfig {
 
 
     // handle audio state ,do some callback method
-    private void handleAudioState(TextModel model,AudioState state) {
+    private void handleAudioState(TextModel model, AudioState state) {
         String identifier = "";
         if (model != null){
             identifier = model.identifier;
@@ -255,9 +251,9 @@ public class TTSPlayer implements ISettingConfig {
     }
 
     // handle error message
-    private void handleErrorMsg(TextModel textModel,int errCode) {
+    private void handleErrorMsg(TextModel textModel, int errCode) {
         if (ttsPlayerListener != null) {
-            handleAudioState(textModel,AudioState.AUDIO_ON_IDLE);
+            handleAudioState(textModel, AudioState.AUDIO_ON_IDLE);
             if (textModel != null){
                 ttsPlayerListener.onError(textModel.identifier,errCode);
             }else {
@@ -287,7 +283,7 @@ public class TTSPlayer implements ISettingConfig {
 
     // init synthesizerJNI
     private int init(Context mContext, String libPath, String dictName, String sndName,
-                    TTSPlayerListener ttsPlayerListener, int streamType) {
+                     TTSPlayerListener ttsPlayerListener, int streamType) {
         if (mContext != null
                 && ttsPlayerListener != null) {
             mThreadPool = Executors.newFixedThreadPool(MAX_THREAD_AMOUNT);
@@ -327,10 +323,7 @@ public class TTSPlayer implements ISettingConfig {
             mSynthTask.onRelease();
             mSynthTask = null;
         }
-        if (mThreadPool != null) {
-            mThreadPool.shutdownNow();
-            mThreadPool = null;
-        }
+
         ttsHandler.removeCallbacksAndMessages(null);
         textQueue.clear();
     }
@@ -352,10 +345,10 @@ public class TTSPlayer implements ISettingConfig {
                 return;
             }
 
-            mAudioTask = new AudioTask(this, ttsHandler, streamType);
+            mAudioTask = new MessageAudioTask(this, ttsHandler, streamType);
             mAudioTask.setIdentifier(textModel.identifier);
             mAudioTask.setTextModel(textModel);
-            mThreadPool.execute(mAudioTask);
+            mAudioTask.start();
 
             mSynthTask = new MultiSynthesizerTask(this, ttsHandler, textModel.mode);
 
@@ -412,7 +405,7 @@ public class TTSPlayer implements ISettingConfig {
     public void resume() {
         if (audioState.get() == AudioState.AUDIO_ON_PAUSE) {
             if (mAudioTask != null) {
-                mThreadPool.execute(mAudioTask);
+                mAudioTask.onResume();
             }
         }
     }
@@ -422,27 +415,22 @@ public class TTSPlayer implements ISettingConfig {
             mAudioTask.onStop();
         }
 
-        synchronized (mSynthEnd) {
-            mSynthEnd = false;
-        }
         if (mSynthTask != null) {
             mSynthTask.onStop();
         }
         try {
             if (mSynthTask != null) {
-                mSynthTask.join();
+                mSynthTask.interrupt();
                 mSynthTask = null;
             }
             if (mAudioTask != null) {
-                mAudioTask.join();
+                mAudioTask.interrupt();
                 mAudioTask = null;
             }
 
         } catch (Exception e) {
 
         }
-
-        WavQueue.clear();
 
         if (mInputTexts != null) {
             mInputTexts.clear();
@@ -556,7 +544,7 @@ public class TTSPlayer implements ISettingConfig {
         }
     }
 
-    public static void initZhiyinInfo(Context context,ZhiyinInitInfo info){
+    public static void initZhiyinInfo(Context context, ZhiyinInitInfo info, TokenFetchTask.TokenFetchListener listener){
         if (TextUtils.isEmpty(info.baseUrl)){
             throw new IllegalArgumentException("no baseUrl!");
 
@@ -581,10 +569,22 @@ public class TTSPlayer implements ISettingConfig {
         }else if(!TextUtils.isEmpty(info.appkey)) {
             CommonSharedPreference.getInstance(context).setString("appkey", info.appkey);
 
-           AuthManager.getInstance().init(context);
+            AuthManager.getInstance().init(context,listener);
         }else {
             throw new IllegalArgumentException("no token or appkey!");
         }
+    }
+
+    public static void initZhiyinInfo(Context context,ZhiyinInitInfo info){
+        initZhiyinInfo(context,info,null);
+    }
+
+    public void setToken(String token){
+        CommonSharedPreference.getInstance(mContext).setString(CommonSharedPreference.TOKEN, token);
+    }
+
+    public void setTokenExp(long tokenExp){
+        CommonSharedPreference.getInstance(mContext).setLong(CommonSharedPreference.TIMEOUT_STAMP, tokenExp);
     }
 
 }

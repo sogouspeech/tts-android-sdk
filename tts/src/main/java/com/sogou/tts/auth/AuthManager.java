@@ -37,7 +37,7 @@ public class AuthManager {
 
     private AuthManager(){}
 
-    public void init(Context context){
+    public void init(Context context, final TokenFetchTask.TokenFetchListener listener){
         if (!mOfflineStatus) {
             mOfflineStatus = false;
         }
@@ -47,11 +47,17 @@ public class AuthManager {
                 @Override
                 public void onTokenFetchSucc(String result) {
                     mOnlineStatus = true;
+                    if (listener != null){
+                        listener.onTokenFetchSucc(result);
+                    }
                 }
 
                 @Override
                 public void onTokenFetchFailed(String errMsg) {
                     mOnlineStatus = false;
+                    if (listener != null){
+                        listener.onTokenFetchFailed(errMsg);
+                    }
                 }
             });
             task.execute();

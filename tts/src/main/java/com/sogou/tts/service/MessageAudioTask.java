@@ -7,6 +7,7 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 
 import com.sogou.tts.TTSPlayer;
@@ -15,29 +16,35 @@ import com.sogou.tts.setting.IRecordAudioConfig;
 import com.sogou.tts.setting.ISettingConfig;
 import com.sogou.tts.utils.ErrorIndex;
 
+import java.util.concurrent.CountDownLatch;
 
-public class AudioTask extends Thread implements ISettingConfig, IRecordAudioConfig {
+
+public class MessageAudioTask extends Thread implements ISettingConfig, IRecordAudioConfig {
+
+    public static final int MESSAGE_PLAY = 1000;
+    public static final int MESSAGE_QUIT = 1001;
+    public static final int MESSAGE_RESUME = 1002;
+    public static final int MESSAGE_PAUSE = 1003;
+    public static final int MESSAGE_END = 1004;
 
     private Handler ttsHandler = null;
     private AudioTrack mAudioTrack = null;
     private int mPlayOffset = 0;
     private int minBufferSize = -1;
     private TTSPlayer ttsPlayer;
-    private boolean isThreadRunning = false;
     private int streamType = AudioManager.STREAM_MUSIC;
     private int sampleRate = DEFAULT_HIGH_AUDIO_SAMPLE_RATE;
     private int channelConfig = MONO;
     private int audioFormat = PCM_16BIT;
     private boolean mCheckAvailable = false;
-    private boolean mAudioBeginingFlag = true;
-    private boolean hasPaused = false;
+    private Handler mHandler = null;
 
     private float playProgress = 0;
     private String identifier;
     private TextModel textModel;
 
-    public AudioTask(TTSPlayer ttsPlayer, Handler ttsHandler, int streamType) {
-
+    public MessageAudioTask(TTSPlayer ttsPlayer, Handler ttsHandler, int streamType) {
+        super("MessageAudioTask");
         this.ttsHandler = ttsHandler;
         this.ttsPlayer = ttsPlayer;
         this.streamType = streamType;
@@ -50,12 +57,31 @@ public class AudioTask extends Thread implements ISettingConfig, IRecordAudioCon
 
     }
 
+
     public void setTextModel(TextModel textModel) {
         this.textModel = textModel;
     }
 
     public void setIdentifier(String identifier) {
         this.identifier = identifier;
+    }
+
+    public void playBuffer(byte[] buffer){
+        Message message = new Message();
+        message.what = MESSAGE_PLAY;
+        message.obj = buffer;
+        if (mHandler!= null) {
+
+            mHandler.sendMessage(message);
+        }
+    }
+
+    public void onSynEnd(){
+        if (mHandler!= null) {
+            Message message = mHandler.obtainMessage(MESSAGE_END);
+            mHandler.sendMessage(message);
+        }
+
     }
 
     public boolean onPrepare() {
@@ -102,64 +128,50 @@ public class AudioTask extends Thread implements ISettingConfig, IRecordAudioCon
 
     // audio release
     public void onRelease() {
-        isThreadRunning = false;
-        if (mAudioTrack != null) {
-            mAudioTrack.release();
-            mAudioTrack = null;
+        if(mLock.getCount() > 0){
+            mLock.countDown();
         }
-
+        if (mHandler!= null) {
+            mHandler.sendMessageAtFrontOfQueue(mHandler.obtainMessage(MESSAGE_QUIT));
+        }
     }
 
     // audio stop
     public boolean onStop() {
-        isThreadRunning = false;
-        if (mAudioTrack != null) {
-            synchronized (mAudioTrack) {
-                if (mAudioTrack != null) {
-                    mAudioTrack.pause();
-                    mAudioTrack.flush();
-                    mAudioTrack.release();
-                    mAudioBeginingFlag = false;
-
-                    mAudioTrack = null;
-                    sendOnStopMsg();
-                }
-            }
-
+        if(mLock.getCount() > 0){
+            mLock.countDown();
         }
-        playProgress = 0;
+        if (mHandler!= null) {
+            mHandler.sendMessageAtFrontOfQueue(mHandler.obtainMessage(MESSAGE_QUIT));
+        }
+
         return true;
 
     }
 
     // audio pause
     public boolean onPause() {
-        isThreadRunning = false;
-        if (mAudioTrack != null
-                && mAudioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
-            mAudioTrack.pause();
-            mAudioBeginingFlag = true;
-            hasPaused = true;
-            sendOnPauseMsg();
+        if (mHandler!= null) {
+            mHandler.sendMessageAtFrontOfQueue(mHandler.obtainMessage(MESSAGE_PAUSE));
         }
         return true;
 
     }
 
-
-    public boolean isThreadRunning() {
-        return isThreadRunning;
+    public boolean onResume() {
+        if (mHandler!= null) {
+            if(mLock.getCount() > 0){
+                mLock.countDown();
+            }
+            mHandler.sendMessageAtFrontOfQueue(mHandler.obtainMessage(MESSAGE_RESUME));
+        }
+        return true;
     }
 
-    public void setThreadRunning(boolean isThreadRunning) {
-        this.isThreadRunning = isThreadRunning;
-    }
+    private boolean isStart = false;
 
-    @Override
     public void run() {
-
-
-        isThreadRunning = true;
+        Looper.prepare();
         if (!mCheckAvailable) {
             sendErrorMsg();
             return;
@@ -173,88 +185,104 @@ public class AudioTask extends Thread implements ISettingConfig, IRecordAudioCon
         } catch (Exception e) {
             sendErrorMsg();
         }
-        while (isThreadRunning) {
-            if (ttsPlayer.WavQueue.size() == 0 && ttsPlayer.mSynthEnd) {
-                synchronized (ttsPlayer.mSynthEnd) {
-
-                    if (ttsPlayer.WavQueue.size() == 0 && ttsPlayer.mSynthEnd) {
+        mHandler = new Handler(Looper.myLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                switch (msg.what) {
+                    case MESSAGE_END:
+                        sendMessage(obtainMessage(MESSAGE_QUIT));
+                        break;
+                    case MESSAGE_PLAY:
+                        byte[] result = (byte[]) msg.obj;
+                        handleAudioPlay(result);
+                        break;
+                    case MESSAGE_PAUSE:
+                        if (mAudioTrack != null
+                                && mAudioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
+                            mAudioTrack.pause();
+                            sendOnPauseMsg();
+                        }
+                        mLock = new CountDownLatch(1);
                         try {
-                            int sleepTime = (int) ((ttsPlayer.sumTime - playProgress) * 5 + 0.5);
-                            if (sleepTime < 2) {
-                                sleepTime = 2;
-                            }
-                            for (int k = 0; k < sleepTime; k++)
-                                if (isThreadRunning) {
-                                    Thread.sleep(200);
-                                }
-                                else {
-                                    break;
-                                }
+                            mLock.await();
                         } catch (InterruptedException e) {
-                            e.printStackTrace();
                         }
-
-                        onStop();
-                        return;
-                    }
-
-                }
-            } else if (ttsPlayer.WavQueue.size() > 0) {
-
-                if (ttsPlayer.WavQueue.size() > 0) {
-                    byte[] mAudioBuffer = ttsPlayer.WavQueue.peek();
-                    if (hasPaused && isThreadRunning) {
+                        break;
+                    case MESSAGE_RESUME:
+                        mAudioTrack.play();
                         sendOnResumeMsg();
-                        hasPaused = false;
-                    } else if (mAudioBeginingFlag) {
-                        sendOnPlayMsg();
-                    }
-
-
-                    while (mPlayOffset < mAudioBuffer.length) {
-                        if (!isThreadRunning || mAudioTrack == null)
-                            return;
-                        try {
-                            int readsize = mAudioBuffer.length
-                                    - mPlayOffset > minBufferSize ? minBufferSize
-                                    : mAudioBuffer.length - mPlayOffset;
-                            int curBufferSize;
-                            synchronized (mAudioTrack) {
-
-                                if (mAudioTrack != null
-                                        && isThreadRunning) {
-                                    curBufferSize = mAudioTrack.write(
-                                            mAudioBuffer, mPlayOffset,
-                                            readsize);
-                                } else {
-                                    return;
-                                }
-                            }
-                            if (curBufferSize == AudioTrack.ERROR_INVALID_OPERATION) {
-                                sendErrorMsg();
-                                return;
-                            } else if (curBufferSize == AudioTrack.ERROR_BAD_VALUE) {
-                                sendErrorMsg();
-                                return;
-                            } else {
-                                mPlayOffset += curBufferSize;
-
-                            }
-                        } catch (Exception e) {
-                            sendErrorMsg();
-                            return;
+                        break;
+                    case MESSAGE_QUIT:
+                        if (mAudioTrack != null) {
+                            mAudioTrack.pause();
+                            mAudioTrack.flush();
+                            mAudioTrack.release();
+                            mAudioTrack = null;
+                            sendOnStopMsg();
                         }
-                    }
-                    mPlayOffset = 0;
-
-                    if (!isThreadRunning)
-                        return;
-                    ttsPlayer.WavQueue.poll();
+                        removeAllMessage();
+                        playProgress = 0;
+                        if (mHandler!= null) {
+                            mHandler.getLooper().quit();
+                        }
+                        break;
                 }
 
             }
+        };
+        Looper.loop();
+    }
+
+    private CountDownLatch mLock = new CountDownLatch(1);
+
+    private void removeAllMessage(){
+        if (mHandler!= null) {
+            mHandler.removeMessages(MESSAGE_PLAY);
+            mHandler.removeMessages(MESSAGE_PAUSE);
+            mHandler.removeMessages(MESSAGE_RESUME);
+            mHandler.removeMessages(MESSAGE_END);
         }
     }
+
+    private void handleAudioPlay(byte[] data) {
+        byte[] mAudioBuffer = data;
+
+        if (!isStart){
+            isStart = true;
+            sendOnPlayMsg();
+        }
+
+        while (mPlayOffset < mAudioBuffer.length) {
+            if (mAudioTrack == null)
+                return;
+            try {
+                int readsize = mAudioBuffer.length
+                        - mPlayOffset > minBufferSize ? minBufferSize
+                        : mAudioBuffer.length - mPlayOffset;
+                int curBufferSize = mAudioTrack.write(
+                        mAudioBuffer, mPlayOffset,
+                        readsize);
+
+                if (curBufferSize == AudioTrack.ERROR_INVALID_OPERATION) {
+                    sendErrorMsg();
+                    break;
+                } else if (curBufferSize == AudioTrack.ERROR_BAD_VALUE) {
+                    sendErrorMsg();
+                    break;
+                } else {
+                    mPlayOffset += curBufferSize;
+
+                }
+            } catch (Exception e) {
+                sendErrorMsg();
+                break;
+            }
+        }
+        mPlayOffset = 0;
+
+    }
+
 
     private void sendErrorMsg() {
         onRelease();
