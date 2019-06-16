@@ -180,10 +180,20 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
 
     @Override
     public void setLocale(Locale locale) {
-        if (locale == Locale.CHINA){
-            mLocale = "zh-cmn-Hans-CN";
-        }else {
+//        if (locale == Locale.CHINA){
+//            mLocale = "zh-cmn-Hans-CN";
+//        }else {
+//            mLocale = "en-US";
+//        }
+
+        if (locale == Locale.ENGLISH || locale == Locale.UK || locale == Locale.US) {
             mLocale = "en-US";
+        } else if (locale == Locale.JAPAN) {
+            mLocale = "ja-JP";
+        } else if (locale == Locale.KOREA) {
+            mLocale = "ko-KO";
+        } else {
+            mLocale = "zh-cmn-Hans-CN";
         }
     }
 
