@@ -4,15 +4,10 @@
 package com.sogou.tts.service;
 
 import android.content.Context;
-import android.media.AudioTrack;
-import android.os.Environment;
-import android.util.Log;
 
 import com.google.protobuf.ByteString;
 import com.sogou.sogocommon.utils.CommonSharedPreference;
-import com.sogou.sogocommon.utils.CommonUtils;
 import com.sogou.sogocommon.utils.HttpsUtil;
-import com.sogou.sogocommon.utils.SogoConstants;
 import com.sogou.speech.tts.v1.AudioConfig;
 import com.sogou.speech.tts.v1.SynthesisInput;
 import com.sogou.speech.tts.v1.SynthesizeConfig;
@@ -22,7 +17,6 @@ import com.sogou.speech.tts.v1.VoiceConfig;
 import com.sogou.speech.tts.v1.ttsGrpc;
 import com.sogou.tts.TTSPlayer;
 import com.sogou.tts.TextModel;
-
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -191,7 +185,7 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
         } else if (locale == Locale.JAPAN) {
             mLocale = "ja-JP";
         } else if (locale == Locale.KOREA) {
-            mLocale = "ko-KO";
+            mLocale = "ko-KR";
         } else {
             mLocale = "zh-cmn-Hans-CN";
         }
