@@ -250,6 +250,8 @@ public class MultiSynthesizerTask extends Thread implements ISettingConfig {
 
     public void setLocale(Locale locale){mISynthesizeTask.setLocale(locale);}
 
+    public void setLocaleLanguageCode(String localeLanguage){mISynthesizeTask.setLocaleLanguage(localeLanguage);}
+
     public void setSpeaker(String speaker){mISynthesizeTask.setSpeaker(speaker);}
 
 

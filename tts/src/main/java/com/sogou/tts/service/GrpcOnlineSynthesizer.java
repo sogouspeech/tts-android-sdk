@@ -4,6 +4,7 @@
 package com.sogou.tts.service;
 
 import android.content.Context;
+import android.text.TextUtils;
 
 import com.google.protobuf.ByteString;
 import com.sogou.sogocommon.utils.CommonSharedPreference;
@@ -188,6 +189,13 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
             mLocale = "ko-KR";
         } else {
             mLocale = "zh-cmn-Hans-CN";
+        }
+    }
+
+    @Override
+    public void setLocaleLanguage(String localeLanguage) {
+        if(!TextUtils.isEmpty(localeLanguage)){
+            mLocale = localeLanguage;
         }
     }
 

@@ -101,6 +101,7 @@ public class TTSPlayer implements ISettingConfig {
 
 
     private Locale mLanguage = Locale.CHINA;
+    private String mLanguageString = "";
     private Object mControlLock = new Object();
 
     private TextModel mCurrentTextModel;
@@ -122,6 +123,15 @@ public class TTSPlayer implements ISettingConfig {
 
     public void setLanguage(Locale language) {
         mLanguage = language;
+    }
+
+    @SuppressWarnings("Not recommended")
+    public void setLanguageString(String languageCode){
+        mLanguageString = languageCode;
+    }
+
+    public String getLanguageString (){
+        return mLanguageString;
     }
 
     public boolean isSpeaking(){
@@ -355,6 +365,9 @@ public class TTSPlayer implements ISettingConfig {
             mSynthTask.setLocale(mLanguage);
             mSynthTask.setIdentifier(textModel.identifier);
             mSynthTask.setTextModel(textModel);
+            if (!TextUtils.isEmpty(mLanguageString)){
+                mSynthTask.setLocaleLanguageCode(mLanguageString);
+            }
             mSynthTask.start();
         }
 
@@ -375,7 +388,7 @@ public class TTSPlayer implements ISettingConfig {
 
     public void speak(String text, int queuemode, String identifier,int mode) {
 
-        TextModel textModel = new TextModel(identifier, text, mode, mMulPitch, mVolume, mSpeed,mSpeaker,mLanguage);
+        TextModel textModel = new TextModel(identifier, text, mode, mMulPitch, mVolume, mSpeed,mSpeaker,mLanguage,mLanguageString);
         if (queuemode == QUEUE_ADD && mCurrentTextModel != null ){
             boolean addFlag = textQueue.add(textModel);
 

@@ -15,9 +15,10 @@ public class TextModel implements Serializable{
     public int speed = 0;
     public String speaker;
     public Locale locale;
+    public String localeLanguage;
 
 
-    public TextModel(String identifier, String text,int mode,int pitch,int volume, int speed,String speaker,Locale locale){
+    public TextModel(String identifier, String text,int mode,int pitch,int volume, int speed,String speaker,Locale locale,String localeLanguage){
         this.identifier = identifier;
         this.text = text;
         this.mode = mode;
@@ -26,5 +27,6 @@ public class TextModel implements Serializable{
         this.speed = speed;
         this.speaker = speaker;
         this.locale = locale;
+        this.localeLanguage = localeLanguage;
     }
 }

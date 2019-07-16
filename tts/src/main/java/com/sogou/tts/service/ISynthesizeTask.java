@@ -21,6 +21,8 @@ public interface ISynthesizeTask {
 
     public void setLocale(Locale locale);
 
+    public void setLocaleLanguage(String localeLanguage);
+
     public void realease();
 
 
