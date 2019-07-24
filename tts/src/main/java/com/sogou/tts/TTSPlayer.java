@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class TTSPlayer implements ISettingConfig {
      private static final String TAG = "TTSPlayer";
-        private static final String INPUTTEXTS_REGULAR_EXPRESSION = "[。|？|?|！|!|\r|\n|，|,]";
+        private static final String INPUTTEXTS_REGULAR_EXPRESSION = "[。|.|？|?|！|!|\r|\n|，|,]";
     private static final int MAX_THREAD_AMOUNT = 1;
 
     public Float sumTime = 0f;
@@ -465,6 +465,11 @@ public class TTSPlayer implements ISettingConfig {
         }
         List<Object> inputTexts = new ArrayList<Object>();
 
+        if(mMode == Mode.TYPE_ONLINE){
+            inputTexts.clear();
+            inputTexts.add(content);
+            return inputTexts;
+        }
             if (content == null || content.length() <= 0) {
                 return null;
             }
@@ -472,11 +477,11 @@ public class TTSPlayer implements ISettingConfig {
             for (String c : contents) {
                 c = c.trim();
                 if (c.length() > 0) {
-                    while (c.length() > LENGTH){
-                        String text = c.substring(0,LENGTH);
-                        inputTexts.add(text);
-                        c = c.substring(LENGTH);
-                    }
+//                    while (c.length() > LENGTH){
+//                        String text = c.substring(0,LENGTH);
+//                        inputTexts.add(text);
+//                        c = c.substring(LENGTH);
+//                    }
                     inputTexts.add(c);
                 }
             }

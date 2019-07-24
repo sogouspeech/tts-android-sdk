@@ -9,6 +9,7 @@ import android.text.TextUtils;
 import com.google.protobuf.ByteString;
 import com.sogou.sogocommon.utils.CommonSharedPreference;
 import com.sogou.sogocommon.utils.HttpsUtil;
+import com.sogou.sogocommon.utils.LogUtil;
 import com.sogou.speech.tts.v1.AudioConfig;
 import com.sogou.speech.tts.v1.SynthesisInput;
 import com.sogou.speech.tts.v1.SynthesizeConfig;
@@ -43,6 +44,8 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
     private String mLocale = "zh-cmn-Hans-CN";
     private String mSpeaker = "Male";
 
+    private ManagedChannel channel = null;
+
 
     public GrpcOnlineSynthesizer(Context context){
         mContext = context;
@@ -50,6 +53,9 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
     }
 
     private void startOnlineTts(String input, final SynthesizeCallback callback){
+
+        LogUtil.i("input is "+input);
+        LogUtil.i("config:  mPitch:"+mPitch+"   mSpeed:"+mSpeed+"   mVolume:"+mVolume+"   mSpeaker:"+mSpeaker+"   mLocale:"+mLocale);
         SynthesisInput synthesisInput = SynthesisInput.newBuilder().setText(input).build();
         AudioConfig audioConfig = AudioConfig.newBuilder().setAudioEncoding(AudioConfig.AudioEncoding.LINEAR16).
                 setPitch(mPitch).setSpeakingRate(mSpeed).setVolume(mVolume).build();
@@ -99,15 +105,17 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
         headerParams.put("appid",  CommonSharedPreference.getInstance(mContext).getString("appid",""));
         headerParams.put("uuid", CommonSharedPreference.getInstance(mContext).getString("uuid",""));
 
-        final ManagedChannel channel = new OkHttpChannelProvider()
-                .builderForAddress(TTSPlayer.sBaseUrl,
-                        443)
-                .overrideAuthority(TTSPlayer.sBaseUrl
-                        + ":443")
-                .negotiationType(NegotiationType.TLS)
-                .sslSocketFactory(HttpsUtil.getSSLSocketFactory(null, null, null))
-                .intercept(new HeaderClientInterceptor(headerParams))
-                .build();
+        if(channel == null) {
+            channel = new OkHttpChannelProvider()
+                    .builderForAddress(TTSPlayer.sBaseUrl,
+                            443)
+                    .overrideAuthority(TTSPlayer.sBaseUrl
+                            + ":443")
+                    .negotiationType(NegotiationType.TLS)
+                    .sslSocketFactory(HttpsUtil.getSSLSocketFactory(null, null, null))
+                    .intercept(new HeaderClientInterceptor(headerParams))
+                    .build();
+        }
         ttsStub = ttsGrpc.newStub(channel);
     }
 
