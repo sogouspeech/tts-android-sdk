@@ -144,12 +144,14 @@ public class MultiSynthesizerTask extends Thread implements ISettingConfig {
                             return;
                         }
 
-                        sendErrorMsg(ErrorIndex.ERROR_SYNTHESIZER_FAIL);
+                        String errMsg = exceptionMsg==null?"":exceptionMsg.getMessage();
+                        sendErrorMsg(ErrorIndex.ERROR_SYNTHESIZER_FAIL,errMsg);
                     }
                 });
 
         } catch (Exception e) {
-            sendErrorMsg(ErrorIndex.ERROR_SYNTHESIZER_FAIL);
+            sendErrorMsg(ErrorIndex.ERROR_SYNTHESIZER_FAIL,e.getMessage());
+            e.printStackTrace();
             return;
         }
     }
@@ -196,12 +198,13 @@ public class MultiSynthesizerTask extends Thread implements ISettingConfig {
     }
 
     // send synth error message
-    private void sendErrorMsg(int errCode) {
+    private void sendErrorMsg(int errCode,String errormessage) {
         onStop();
         if (ttsHandler != null && ttsPlayer != null) {
             Message msg = ttsHandler.obtainMessage(MSG_ERROR);
             setIdentifier(msg);
             msg.arg1 = errCode;
+            msg.obj = errormessage;
             msg.sendToTarget();
         }
     }
@@ -231,7 +234,8 @@ public class MultiSynthesizerTask extends Thread implements ISettingConfig {
             mISynthesizeTask.realease();
         } catch (Exception e) {
             // TODO Auto-generated catch block
-            sendErrorMsg(ErrorIndex.ERROR_RELEASE_FAIL);
+            sendErrorMsg(ErrorIndex.ERROR_RELEASE_FAIL,e.getMessage());
+            e.printStackTrace();
             return;
         }
     }

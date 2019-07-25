@@ -5,6 +5,7 @@ package com.sogou.tts.service;
 
 import android.content.Context;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.google.protobuf.ByteString;
 import com.sogou.sogocommon.utils.CommonSharedPreference;
@@ -85,9 +86,11 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
 
             @Override
             public void onError(Throwable t) {
+                Log.e("online","online onError:"+t.getMessage());
                 if (callback != null){
                     callback.onFailed(0,t);
                 }
+                t.printStackTrace();
             }
 
             @Override
