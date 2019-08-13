@@ -63,23 +63,26 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
         VoiceConfig voiceConfig = VoiceConfig.newBuilder().setSpeaker(mSpeaker).setLanguageCode(mLocale).build();
         SynthesizeConfig synthesizeConfig = SynthesizeConfig.newBuilder().setAudioConfig(audioConfig).setVoiceConfig(voiceConfig).build();
         SynthesizeRequest synthesizeRequest = SynthesizeRequest.newBuilder().setConfig(synthesizeConfig).setInput(synthesisInput).build();
-        ttsStub.synthesize(synthesizeRequest, new StreamObserver<SynthesizeResponse>() {
+        ttsStub.streamingSynthesize(synthesizeRequest, new StreamObserver<SynthesizeResponse>() {
             @Override
             public void onNext(SynthesizeResponse value) {
                 ByteString byteString = value.getAudioContent();
 
                 final byte[] buffer = byteString.toByteArray();
-
-                int offset = 44;
-                while (offset < buffer.length && isRunning){
-                    int length = Math.min(SIZE_PER_PACKAGE,buffer.length - offset);
-                    byte[] oneBuffer = new byte[length];
-                    System.arraycopy(buffer,offset,oneBuffer,0,length);
-                    if (callback != null){
-                        callback.onSuccess(oneBuffer);
-                    }
-                    offset = offset + length;
-
+                LogUtil.i("xqdebug","返回结果开始 "+buffer.length);
+//                int offset = 44;
+//                while (offset < buffer.length && isRunning){
+//                    int length = Math.min(SIZE_PER_PACKAGE,buffer.length - offset);
+//                    byte[] oneBuffer = new byte[length];
+//                    System.arraycopy(buffer,offset,oneBuffer,0,length);
+//                    if (callback != null){
+//                        callback.onSuccess(oneBuffer);
+//                    }
+//                    offset = offset + length;
+//
+//                }
+                if (callback != null){
+                    callback.onSuccess(buffer);
                 }
 
             }
