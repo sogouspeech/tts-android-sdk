@@ -5,7 +5,6 @@ package com.sogou.tts.service;
 
 import android.content.Context;
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.google.protobuf.ByteString;
 import com.sogou.sogocommon.utils.CommonSharedPreference;
@@ -36,7 +35,7 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
 
     private ttsGrpc.ttsStub ttsStub;
     private Context mContext;
-    private final static int SIZE_PER_PACKAGE = 1024;
+    private final static int SIZE_PER_PACKAGE = 8000;
     private boolean isRunning = true;
 
     private float mSpeed = 1;
@@ -55,8 +54,8 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
 
     private void startOnlineTts(String input, final SynthesizeCallback callback){
 
-        LogUtil.i("input is "+input);
-        LogUtil.i("config:  mPitch:"+mPitch+"   mSpeed:"+mSpeed+"   mVolume:"+mVolume+"   mSpeaker:"+mSpeaker+"   mLocale:"+mLocale);
+        LogUtil.e("input is "+input);
+        LogUtil.e("config:  mPitch:"+mPitch+"   mSpeed:"+mSpeed+"   mVolume:"+mVolume+"   mSpeaker:"+mSpeaker+"   mLocale:"+mLocale);
         SynthesisInput synthesisInput = SynthesisInput.newBuilder().setText(input).build();
         AudioConfig audioConfig = AudioConfig.newBuilder().setAudioEncoding(AudioConfig.AudioEncoding.LINEAR16).
                 setPitch(mPitch).setSpeakingRate(mSpeed).setVolume(mVolume).build();
@@ -66,34 +65,33 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
         ttsStub.streamingSynthesize(synthesizeRequest, new StreamObserver<SynthesizeResponse>() {
             @Override
             public void onNext(SynthesizeResponse value) {
+
                 ByteString byteString = value.getAudioContent();
 
                 final byte[] buffer = byteString.toByteArray();
-                LogUtil.i("xqdebug","返回结果开始 "+buffer.length);
-//                int offset = 44;
-//                while (offset < buffer.length && isRunning){
-//                    int length = Math.min(SIZE_PER_PACKAGE,buffer.length - offset);
-//                    byte[] oneBuffer = new byte[length];
-//                    System.arraycopy(buffer,offset,oneBuffer,0,length);
-//                    if (callback != null){
-//                        callback.onSuccess(oneBuffer);
-//                    }
-//                    offset = offset + length;
-//
-//                }
-                if (callback != null){
-                    callback.onSuccess(buffer);
+                int offset = 0;
+                while (offset < buffer.length && isRunning){
+                    int length = Math.min(SIZE_PER_PACKAGE,buffer.length - offset);
+                    byte[] oneBuffer = new byte[length];
+                    System.arraycopy(buffer,offset,oneBuffer,0,length);
+                    if (callback != null){
+                        callback.onSuccess(oneBuffer);
+                    }
+                    offset = offset + length;
+
                 }
+//                if (callback != null){
+//                    callback.onSuccess(buffer);
+//                }
+//                FileUtils.writeByteArray2SDCard("/sdcard/sogou/ttsResult/","ruTest.pcm",buffer,true);
 
             }
 
             @Override
             public void onError(Throwable t) {
-                Log.e("online","online onError:"+t.getMessage());
                 if (callback != null){
                     callback.onFailed(0,t);
                 }
-                t.printStackTrace();
             }
 
             @Override
