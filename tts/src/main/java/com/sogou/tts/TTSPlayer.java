@@ -232,9 +232,11 @@ public class TTSPlayer implements ISettingConfig {
         switch (state) {
             case AUDIO_ON_IDLE:
                 String a = null;
+                if(model!=null) {
+                    a =model.text;
+                }
                 TextModel textModel = mCurrentTextModel;
                 if (textModel != null) {
-                    a = textModel.text;
                     if (textModel == model){
                         mCurrentTextModel = null;
                     }
@@ -386,7 +388,7 @@ public class TTSPlayer implements ISettingConfig {
         speak(text,queuemode,identifier,mMode);
     }
 
-    public void speak(String text, int queuemode, String identifier,int mode) {
+    public synchronized void speak(String text, int queuemode, String identifier,int mode) {
 
         TextModel textModel = new TextModel(identifier, text, mode, mMulPitch, mVolume, mSpeed,mSpeaker,mLanguage,mLanguageString);
         if (queuemode == QUEUE_ADD && mCurrentTextModel != null ){
@@ -423,7 +425,7 @@ public class TTSPlayer implements ISettingConfig {
         }
     }
 
-    private void innerStop(){
+    private synchronized void innerStop(){
         if (mAudioTask != null) {
             mAudioTask.onStop();
         }
@@ -452,7 +454,7 @@ public class TTSPlayer implements ISettingConfig {
     }
 
     // TTSPlayer stop
-    public void stop() {
+    public synchronized void stop() {
         textQueue.clear();
         innerStop();
 
@@ -465,11 +467,11 @@ public class TTSPlayer implements ISettingConfig {
         }
         List<Object> inputTexts = new ArrayList<Object>();
 
-        if(mMode == Mode.TYPE_ONLINE){
-            inputTexts.clear();
-            inputTexts.add(content);
-            return inputTexts;
-        }
+//        if(mMode == Mode.TYPE_ONLINE){
+//            inputTexts.clear();
+//            inputTexts.add(content);
+//            return inputTexts;
+//        }
             if (content == null || content.length() <= 0) {
                 return null;
             }
