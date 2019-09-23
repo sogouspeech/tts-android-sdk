@@ -63,13 +63,16 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
         SynthesizeConfig synthesizeConfig = SynthesizeConfig.newBuilder().setAudioConfig(audioConfig).setVoiceConfig(voiceConfig).build();
         SynthesizeRequest synthesizeRequest = SynthesizeRequest.newBuilder().setConfig(synthesizeConfig).setInput(synthesisInput).build();
         ttsStub.streamingSynthesize(synthesizeRequest, new StreamObserver<SynthesizeResponse>() {
+            private int responseNum = 0;
             @Override
             public void onNext(SynthesizeResponse value) {
-
                 ByteString byteString = value.getAudioContent();
-
                 final byte[] buffer = byteString.toByteArray();
                 int offset = 0;
+
+                if (responseNum == 0){
+                    offset = 44;
+                }
                 while (offset < buffer.length && isRunning){
                     int length = Math.min(SIZE_PER_PACKAGE,buffer.length - offset);
                     byte[] oneBuffer = new byte[length];
@@ -78,13 +81,11 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
                         callback.onSuccess(oneBuffer);
                     }
                     offset = offset + length;
-
                 }
+                responseNum ++;
 //                if (callback != null){
 //                    callback.onSuccess(buffer);
 //                }
-//                FileUtils.writeByteArray2SDCard("/sdcard/sogou/ttsResult/","ruTest.pcm",buffer,true);
-
             }
 
             @Override
@@ -96,6 +97,7 @@ public class GrpcOnlineSynthesizer implements ISynthesizeTask {
 
             @Override
             public void onCompleted() {
+                responseNum = 0;
                 if (callback != null){
                     callback.onResultCount();
                 }
