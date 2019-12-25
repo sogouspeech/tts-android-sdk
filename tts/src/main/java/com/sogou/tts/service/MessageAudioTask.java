@@ -16,7 +16,9 @@ import com.sogou.tts.setting.IRecordAudioConfig;
 import com.sogou.tts.setting.ISettingConfig;
 import com.sogou.tts.utils.ErrorIndex;
 
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingDeque;
 
 
 public class MessageAudioTask extends Thread implements ISettingConfig, IRecordAudioConfig {
@@ -43,6 +45,10 @@ public class MessageAudioTask extends Thread implements ISettingConfig, IRecordA
     private String identifier;
     private TextModel textModel;
 
+    BlockingDeque<byte[]> mAudioStreamQueue = new LinkedBlockingDeque<>();
+
+    private boolean mSynthing = false;
+
     public MessageAudioTask(TTSPlayer ttsPlayer, Handler ttsHandler, int streamType) {
         super("MessageAudioTask");
         this.ttsHandler = ttsHandler;
@@ -54,7 +60,6 @@ public class MessageAudioTask extends Thread implements ISettingConfig, IRecordA
         } else {
             mCheckAvailable = true;
         }
-
     }
 
 
@@ -67,6 +72,7 @@ public class MessageAudioTask extends Thread implements ISettingConfig, IRecordA
     }
 
     public void playBuffer(byte[] buffer){
+        mAudioStreamQueue.offer(buffer);
         Message message = new Message();
         message.what = MESSAGE_PLAY;
         message.obj = buffer;
@@ -76,12 +82,16 @@ public class MessageAudioTask extends Thread implements ISettingConfig, IRecordA
         }
     }
 
-    public void onSynEnd(){
-        if (mHandler!= null) {
-            Message message = mHandler.obtainMessage(MESSAGE_END);
-            mHandler.sendMessage(message);
-        }
+    public void onSynBegin() {
+        mSynthing = true;
+    }
 
+    public void onSynEnd(){
+        mSynthing = false;
+//        if (mHandler!= null) {
+//            Message message = mHandler.obtainMessage(MESSAGE_END);
+//            mHandler.sendMessage(message);
+//        }
     }
 
     public boolean onPrepare() {
@@ -252,7 +262,6 @@ public class MessageAudioTask extends Thread implements ISettingConfig, IRecordA
             isStart = true;
             sendOnPlayMsg();
         }
-
         while (mPlayOffset < mAudioBuffer.length) {
             if (mAudioTrack == null)
                 return;
@@ -280,7 +289,11 @@ public class MessageAudioTask extends Thread implements ISettingConfig, IRecordA
             }
         }
         mPlayOffset = 0;
-
+        mAudioStreamQueue.poll();
+        if(!mSynthing && mAudioStreamQueue.isEmpty()) {
+            Message message = mHandler.obtainMessage(MESSAGE_END);
+            mHandler.sendMessageDelayed(message, 500);
+        }
     }
 
 
@@ -348,5 +361,4 @@ public class MessageAudioTask extends Thread implements ISettingConfig, IRecordA
         msg.setData(bundle);
 
     }
-
 }

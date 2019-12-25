@@ -36,8 +36,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 
 public class TTSPlayer implements ISettingConfig {
-     private static final String TAG = "TTSPlayer";
-        private static final String INPUTTEXTS_REGULAR_EXPRESSION = "[。|.|？|?|！|!|\r|\n|，|,]";
+    private static final String TAG = "TTSPlayer";
+    private static final String INPUTTEXTS_REGULAR_EXPRESSION = "[。|.|？|?|！|!|\r|\n|，|,]";
     private static final int MAX_THREAD_AMOUNT = 1;
 
     public Float sumTime = 0f;
@@ -184,7 +184,9 @@ public class TTSPlayer implements ISettingConfig {
                     break;
                 // handle synthesizer begin message
                 case MSG_SYNTH_BEGIN:
-
+                    if (mAudioTask != null) {
+                        mAudioTask.onSynBegin();
+                    }
                     break;
                 // handle synthesizer end message
                 case MSG_SYNTH_END:

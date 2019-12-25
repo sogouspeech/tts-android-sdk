@@ -25,13 +25,9 @@ public interface ISynthesizeTask {
 
     public void realease();
 
-
     public int setModelIdx(int newIdx);
 
-
-
     public void setTextModel(TextModel model);
-
 
     public int init(String libPrefix, String dictName,String sndName);
 
