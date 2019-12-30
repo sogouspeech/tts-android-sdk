@@ -5,6 +5,7 @@ package com.sogou.tts;
 
 import android.content.Context;
 import android.media.AudioManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -44,8 +45,10 @@ public class TTSPlayer implements ISettingConfig {
     private int streamType = AudioManager.STREAM_MUSIC;
     private boolean ifWriteLog = false;
     static {
-        if (Conscrypt.isAvailable()) {
-            Security.insertProviderAt(Conscrypt.newProvider("GmsCore_OpenSSL"), 1);
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.LOLLIPOP || Build.VERSION.SDK_INT ==   Build.VERSION_CODES.LOLLIPOP_MR1 ) {
+            if (Conscrypt.isAvailable()) {
+                Security.insertProviderAt(Conscrypt.newProvider("GmsCore_OpenSSL"), 1);
+            }
         }
     }
     private MultiSynthesizerTask mSynthTask = null;
